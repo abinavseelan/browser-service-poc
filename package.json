@@ -1,0 +1,27 @@
+{
+  "name": "browser-service-poc",
+  "version": "1.0.0",
+  "description": "PoC for a service to provide a cloud-based browser instance",
+  "main": "-",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abinavseelan/browser-service-poc.git"
+  },
+  "author": "Abinav Seelan <abinav.n.seelan@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abinavseelan/browser-service-poc/issues"
+  },
+  "homepage": "https://github.com/abinavseelan/browser-service-poc#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.5",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1",
+    "nodemon": "^1.18.10",
+    "puppeteer": "^1.12.2"
+  }
+}
