@@ -54,7 +54,7 @@ io.on('connection', async (socket) => {
           encoding: 'base64',
         });
 
-        socket.emit('new-page-content', { pageContent });
+        socket.emit('new-page-content', { pageContent, url: page.url() });
       } else {
         clearInterval(timer);
       }
@@ -122,6 +122,16 @@ io.on('connection', async (socket) => {
 
     socket.on('go-back', async () => {
       await page.goBack();
+    });
+
+    socket.on('navigate', async (data) => {
+      let url = data.url;
+
+      if (url.indexOf('http') === -1) {
+        url = `http://${url}`;
+      }
+
+      await page.goto(url);
     });
 
     socket.on('disconnect', async () => {

@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 
 const socket = io('http://localhost:1337/');
 
-import { Container } from './styles';
+import { ActionRow, Container } from './styles';
 
 class App extends Component {
   constructor(props) {
@@ -12,6 +12,8 @@ class App extends Component {
     this.state = {
       loading: true,
       pageContent: null,
+      urlBarFocused: false,
+      urlBar: '',
     }
 
     socket.on('enviroment-setup', () => {
@@ -26,12 +28,16 @@ class App extends Component {
     });
 
     socket.on('new-page-content', (data) => {
-      this.setState({
+      const updateObject = {
         loading: false,
         pageContent: data.pageContent,
-      }, () => {
-        socket.emit('blah', {});
-      })
+      };
+
+      if (!this.state.urlBarFocused) {
+        updateObject.urlBar = data.url;
+      }
+
+      this.setState(updateObject);
     })
   }
 
@@ -59,6 +65,18 @@ class App extends Component {
     socket.emit('go-back');
   }
 
+  handleUrlUpdate = (e) => {
+    this.setState({
+      urlBar: e.target.value,
+    });
+  }
+
+  handleNavigation = (e) => {
+    e.preventDefault();
+
+    socket.emit('navigate', { url: this.state.urlBar });
+  }
+
   render() {
     return (
       <div>
@@ -69,6 +87,20 @@ class App extends Component {
             )
             : (
               <React.Fragment>
+                <ActionRow>
+                  <button onClick={this.handleBack}>
+                    Go Back
+                  </button>
+                  <form onSubmit={this.handleNavigation}>
+                    <input
+                      type='text'
+                      onFocus={() => this.setState({ urlBarFocused: true })}
+                      onBlur={() => this.setState({ urlBarFocused: false })}
+                      value={this.state.urlBar}
+                      onChange={this.handleUrlUpdate}
+                    />
+                  </form>
+                </ActionRow>
                 <Container
                   onClick={this.handleClick}
                   tabIndex='0'
@@ -76,9 +108,6 @@ class App extends Component {
                 >
                   <img alt='Cloud Browser' src={`data:image/jpeg;base64, ${this.state.pageContent}`} />
                 </Container>
-                <button onClick={this.handleBack}>
-                  Go Back
-                </button>
               </React.Fragment>
             )
         }
