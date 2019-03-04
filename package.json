@@ -4,7 +4,7 @@
   "description": "PoC for a service to provide a cloud-based browser instance",
   "main": "-",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "concurrently 'webpack-dev-server' 'nodemon server/index.js'"
   },
   "repository": {
     "type": "git",
@@ -17,12 +17,26 @@
   },
   "homepage": "https://github.com/abinavseelan/browser-service-poc#readme",
   "dependencies": {
+    "@babel/core": "^7.3.4",
+    "@babel/plugin-proposal-class-properties": "^7.3.4",
+    "@babel/preset-env": "^7.3.4",
+    "@babel/preset-react": "^7.0.0",
+    "babel-loader": "^8.0.5",
     "body-parser": "^1.18.3",
+    "concurrently": "^4.1.0",
     "cors": "^2.8.5",
     "express": "^4.16.4",
+    "html-webpack-plugin": "^3.2.0",
     "morgan": "^1.9.1",
     "nodemon": "^1.18.10",
     "puppeteer": "^1.12.2",
-    "socket.io": "^2.2.0"
+    "react": "^16.8.3",
+    "react-dom": "^16.8.3",
+    "socket.io": "^2.2.0",
+    "socket.io-client": "^2.2.0",
+    "styled-components": "^4.1.3",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-server": "^3.2.1"
   }
 }
