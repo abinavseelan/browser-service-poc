@@ -55,6 +55,10 @@ class App extends Component {
     });
   }
 
+  handleBack = () => {
+    socket.emit('go-back');
+  }
+
   render() {
     return (
       <div>
@@ -65,15 +69,6 @@ class App extends Component {
             )
             : (
               <React.Fragment>
-                {/* <div>
-                <input
-                  type='text'
-                  onChange={this.handleUrl}
-                  placeholder='Enter Url'
-                  value={this.state.currentUrl}
-                />
-                <button onClick={this.goToUrl}>Go</button>
-              </div> */}
                 <Container
                   onClick={this.handleClick}
                   tabIndex='0'
@@ -81,6 +76,9 @@ class App extends Component {
                 >
                   <img alt='Cloud Browser' src={`data:image/jpeg;base64, ${this.state.pageContent}`} />
                 </Container>
+                <button onClick={this.handleBack}>
+                  Go Back
+                </button>
               </React.Fragment>
             )
         }

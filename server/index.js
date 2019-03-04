@@ -120,6 +120,10 @@ io.on('connection', async (socket) => {
       }
     });
 
+    socket.on('go-back', async () => {
+      await page.goBack();
+    });
+
     socket.on('disconnect', async () => {
       console.log('Clearing timer and disconnecting');
       clearInterval(timer);
