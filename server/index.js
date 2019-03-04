@@ -8,7 +8,6 @@ const morgan = require('morgan');
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
 
-
 app.use(bodyParser.json());
 app.use(cors())
 app.use(morgan('dev'));
@@ -47,7 +46,7 @@ io.on('connection', async (socket) => {
     });
 
     const timer = setInterval(async () => {
-      if (page) {
+      if (!page.isClosed()) {
         const pageContent = await page.screenshot({
           type: 'jpeg',
           quality: 50,
@@ -69,10 +68,60 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('keypress', async (data) => {
-      await page.keyboard.sendCharacter(String.fromCharCode(data.charCode));
+      if (data.shiftKey) {
+        await page.keyboard.down('Shift');
+      }
+
+      switch (data.which) {
+        case 8: {
+          await page.keyboard.press('Backspace');
+          break;
+        }
+
+        case 13: {
+          await page.keyboard.press('Enter');
+        }
+
+        case 32: {
+          await page.keyboard.press('Space');
+        }
+
+        case 37: {
+          await page.keyboard.press('ArrowLeft');
+          break;
+        }
+
+        case 38: {
+          await page.keyboard.press('ArrowUp');
+          break;
+        }
+
+        case 39: {
+          await page.keyboard.press('ArrowRight');
+          break;
+        }
+
+        case 40: {
+          await page.keyboard.press('ArrowDown');
+          break;
+        }
+
+        default: {
+          let character = data.which;
+
+          if (data.shiftKey && data.capsLock) {
+            character += 32;
+          } else if (!data.shiftKey && !data.capsLock) {
+            character += 32;
+          }
+
+          await page.keyboard.sendCharacter(String.fromCharCode(character));
+        }
+      }
     });
 
     socket.on('disconnect', async () => {
+      console.log('Clearing timer and disconnecting');
       clearInterval(timer);
       await browser.close();
     });

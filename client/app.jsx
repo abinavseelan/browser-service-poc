@@ -13,9 +13,7 @@ class App extends Component {
       loading: true,
       pageContent: null,
     }
-  }
 
-  componentDidMount() {
     socket.on('enviroment-setup', () => {
       socket.emit('bootstrap', { width: 1200, height: 800 });
     })
@@ -50,7 +48,11 @@ class App extends Component {
   handleKeyPress = (e) => {
     e.stopPropagation();
 
-    socket.emit('keypress', { charCode: e.charCode });
+    socket.emit('keypress', {
+      which: e.keyCode,
+      capsLock: e.getModifierState('CapsLock'),
+      shiftKey: e.shiftKey,
+    });
   }
 
   render() {
@@ -75,7 +77,7 @@ class App extends Component {
                 <Container
                   onClick={this.handleClick}
                   tabIndex='0'
-                  onKeyPress={this.handleKeyPress}
+                  onKeyDown={this.handleKeyPress}
                 >
                   <img alt='Cloud Browser' src={`data:image/jpeg;base64, ${this.state.pageContent}`} />
                 </Container>
