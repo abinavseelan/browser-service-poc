@@ -1,118 +1,79 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const app = express();
 const port = 1337;
 const puppeteer = require('puppeteer');
 const cors = require('cors');
 const morgan = require('morgan');
+const server = require('http').Server(app);
+const io = require('socket.io')(server);
 
-const app = express();
 
 app.use(bodyParser.json());
 app.use(cors())
 app.use(morgan('dev'));
 
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server running on port ${port}`);
-})
-
-app.post('/start', (req, res) => {
-    const { width, height } = req.body;
-
-    puppeteer.launch().then(async browser => {
-        try {
-            const page = await browser.newPage();
-            await page.setViewport({
-                width,
-                height,
-            });
-    
-            await page.goto('https://www.flipkart.com/account/login?ret="/"', {
-                waitUntil: "networkidle2"
-            });
-            await page.type(`form[autocomplete="on"] input[type="text"]`, 'abinav.n.seelan@gmail.com');
-            await page.type(`form[autocomplete="on"] input[type="password"]`, 'a7xandsynforlife');
-            await page.click(`form[autocomplete="on"] button[type="submit"]`);
-            await page.waitForNavigation({
-                waitUntil: "domcontentloaded"
-            });
-            res.json({
-                wsEndpoint: browser.wsEndpoint(),
-    
-            });
-        } catch (err) {
-            console.log(err);
-            browser.close();
-        }
-    });
 });
 
-app.post('/query/:query', (req, res) => {
-    const { wsEndpoint } = req.body;
+io.on('connection', async (socket) => {
+    const browser = await puppeteer.launch({
+        // headless: false,
+    });
+    const page = await browser.newPage();
 
-    const {query} = req.params;
+    socket.emit('enviroment-setup', { status: 'complete' });
 
-    if (!wsEndpoint) {
-        return res.status(400).json({
-            message: 'wsEndpoint undefined',
+    socket.on('bootstrap', async (data) => {
+        const { width, height } = data;
+        await page.setViewport({
+            width,
+            height,
         });
-    }
 
-    puppeteer
-        .connect({ browserWSEndpoint: wsEndpoint })
-        .then(async browser => {
-            try {
-                const [ currentPage ] = await browser.pages();
-    
-                await currentPage.goto(`https://www.flipkart.com/search?q=${query}`, {
-                    waitUntil: "networkidle2",
-                });
-    
-                const pageContent = await currentPage.screenshot({
-                    type: 'jpeg',
-                    quality: 50,
-                    fullPage: true,
-                    encoding: 'base64',
-                });
-
-                res.status(200).json({
-                    pageContent,
-                });
-            } catch (err) {
-                console.log(err);
-                browser.close();
-            }
+        await page.goto('https://google.com', {
+            waitUntil: "networkidle2"
         });
-})
 
-app.post('/click', (req, res) => {
-    const { wsEndpoint, x, y } = req.body;
-
-    if (!wsEndpoint || typeof x === 'undefined' || typeof y === 'undefined') {
-        return res.status(400).json({
-            message: 'wsEndpoint, x or y is undefined',
+        const pageContent = await page.screenshot({
+            type: 'jpeg',
+            quality: 50,
+            fullPage: true,
+            encoding: 'base64',
         });
-    }
 
-    puppeteer
-        .connect({browserWSEndpoint: wsEndpoint})
-        .then(async browser => {
-            const [currentPage] = await browser.pages();
+        socket.emit('bootstrap-complete', { status: 'complete', pageContent });
+    });
 
-            await currentPage.mouse.click(x, y, {
-                delay: 500,
-            });
-
-            await currentPage.waitFor(1000);
-
-            const pageContent = await currentPage.screenshot({
+    const timer = setInterval(async () => {
+        if (page) {
+            const pageContent = await page.screenshot({
                 type: 'jpeg',
                 quality: 50,
                 fullPage: true,
                 encoding: 'base64',
             });
+    
+            socket.emit('new-page-content', { pageContent });
+        } else {
+            clearInterval(timer);
+        }
+    }, 600);
 
-            res.status(200).json({
-                pageContent,
-            });
-        })
-})
+    socket.on('click', async (data) => {
+        const {x, y} = data;
+
+        await page.mouse.move(x, y);
+        await page.mouse.click(x, y);
+    });
+
+    socket.on('keypress', async (data) => {
+        await page.keyboard.sendCharacter(String.fromCharCode(data.charCode));
+    });
+
+    socket.on('disconnect', async () => {
+        clearInterval(timer);
+        await browser.close();
+    });
+});
