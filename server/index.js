@@ -7,6 +7,8 @@ const cors = require('cors');
 const morgan = require('morgan');
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+const devices = require('puppeteer/DeviceDescriptors');
+const iPhone = devices['iPhone 6'];
 
 app.use(bodyParser.json());
 app.use(cors())
@@ -16,26 +18,43 @@ server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
+const getPages = async (browser) => {
+  let pages = await browser.pages();
+  pages.splice(0, 1);
+
+  return pages;
+}
+
 io.on('connection', async (socket) => {
   const browser = await puppeteer.launch({
       // headless: false,
   });
-  const page = await browser.newPage();
+
+  await browser.newPage();
+
+  let pages = await getPages(browser);
+
+  let currentPage = pages[0];
 
   socket.emit('enviroment-setup', { status: 'complete' });
 
   socket.on('bootstrap', async (data) => {
-      const { width, height } = data;
-      await page.setViewport({
+      const { width, height } = data
+
+      // For Mobile
+      // await currentPage.emulate(iPhone)
+
+      // For Desktop
+      await currentPage.setViewport({
         width,
         height,
       });
 
-      await page.goto('https://google.com', {
+      await currentPage.goto('https://google.com', {
         waitUntil: "networkidle2"
       });
 
-      const pageContent = await page.screenshot({
+      const pageContent = await currentPage.screenshot({
         type: 'jpeg',
         quality: 50,
         fullPage: true,
@@ -45,64 +64,53 @@ io.on('connection', async (socket) => {
       socket.emit('bootstrap-complete', { status: 'complete', pageContent });
     });
 
-    const timer = setInterval(async () => {
-      if (!page.isClosed()) {
-        const pageContent = await page.screenshot({
-          type: 'jpeg',
-          quality: 50,
-          fullPage: true,
-          encoding: 'base64',
-        });
-
-        socket.emit('new-page-content', { pageContent, url: page.url() });
-      } else {
-        clearInterval(timer);
-      }
-    }, 600);
-
     socket.on('click', async (data) => {
       const {x, y} = data;
 
-      await page.mouse.move(x, y);
-      await page.mouse.click(x, y);
+      await currentPage.mouse.move(x, y);
+      await currentPage.mouse.click(x, y, {
+        delay: 200,
+      });
+
+      pages = await getPages(browser);
     });
 
     socket.on('keypress', async (data) => {
       if (data.shiftKey) {
-        await page.keyboard.down('Shift');
+        await currentPage.keyboard.down('Shift');
       }
 
       switch (data.which) {
         case 8: {
-          await page.keyboard.press('Backspace');
+          await currentPage.keyboard.press('Backspace');
           break;
         }
 
         case 13: {
-          await page.keyboard.press('Enter');
+          await currentPage.keyboard.press('Enter');
         }
 
         case 32: {
-          await page.keyboard.press('Space');
+          await currentPage.keyboard.press('Space');
         }
 
         case 37: {
-          await page.keyboard.press('ArrowLeft');
+          await currentPage.keyboard.press('ArrowLeft');
           break;
         }
 
         case 38: {
-          await page.keyboard.press('ArrowUp');
+          await currentPage.keyboard.press('ArrowUp');
           break;
         }
 
         case 39: {
-          await page.keyboard.press('ArrowRight');
+          await currentPage.keyboard.press('ArrowRight');
           break;
         }
 
         case 40: {
-          await page.keyboard.press('ArrowDown');
+          await currentPage.keyboard.press('ArrowDown');
           break;
         }
 
@@ -115,13 +123,13 @@ io.on('connection', async (socket) => {
             character += 32;
           }
 
-          await page.keyboard.sendCharacter(String.fromCharCode(character));
+          await currentPage.keyboard.sendCharacter(String.fromCharCode(character));
         }
       }
     });
 
     socket.on('go-back', async () => {
-      await page.goBack();
+      await currentPage.goBack();
     });
 
     socket.on('navigate', async (data) => {
@@ -131,8 +139,34 @@ io.on('connection', async (socket) => {
         url = `http://${url}`;
       }
 
-      await page.goto(url);
+      await currentPage.goto(url);
     });
+
+    socket.on('tab-switch', async (data) => {
+      pages = await getPages(browser);
+      currentPage = pages[data.tabIndex];
+    });
+
+    const timer = setInterval(async () => {
+      if (!currentPage.isClosed()) {
+        const pageContent = await currentPage.screenshot({
+          type: 'jpeg',
+          quality: 30,
+          fullPage: true,
+          encoding: 'base64',
+        });
+
+        const pageList = pages.map(page => { return page.url() });
+
+        socket.emit('new-page-content', {
+          pageContent,
+          pageList,
+          url: currentPage.url()
+        });
+      } else {
+        clearInterval(timer);
+      }
+    }, 600);
 
     socket.on('disconnect', async () => {
       console.log('Clearing timer and disconnecting');
