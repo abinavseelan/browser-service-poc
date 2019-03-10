@@ -3,7 +3,14 @@ import io from 'socket.io-client';
 
 const socket = io('http://localhost:1337/');
 
-import { ActionRow, Container } from './styles';
+import {
+  ActionRow,
+  Container,
+  MockViewPort,
+  MockBrowser,
+  TabsRow,
+  Tab,
+} from './styles';
 
 const WIDTH = 1200;
 const HEIGHT = 800;
@@ -128,24 +135,26 @@ class App extends Component {
 
   render() {
     const { currentPage, pages } = this.state;
-    console.log(pages[currentPage].urlBar);
+
     return (
-      <div>
+      <Container>
         {
           this.state.loading
             ? (
               <p>Loading Enviroment</p>
             )
             : (
-              <React.Fragment>
-                {
-                  pages.map((page, index) => (
-                    <div onClick={this.handleTabSwitch(index)}>Tab {Number(index) + 1}</div>
-                  ))
-                }
+              <MockBrowser>
+                <TabsRow>
+                  {
+                    pages.map((page, index) => (
+                      <Tab onClick={this.handleTabSwitch(index)} active={index === currentPage}>Tab {Number(index) + 1}</Tab>
+                    ))
+                  }
+                </TabsRow>
                 <ActionRow>
-                  <button onClick={this.handleBack}>
-                    Go Back
+                  <button onClick={this.handleBack} className='material-icons'>
+                    arrow_back
                   </button>
                   <form onSubmit={this.handleNavigation}>
                     <input
@@ -157,7 +166,7 @@ class App extends Component {
                     />
                   </form>
                 </ActionRow>
-                <Container
+                <MockViewPort
                   style={{
                     maxWidth: WIDTH,
                     maxHeight: HEIGHT,
@@ -172,11 +181,11 @@ class App extends Component {
                     alt='Cloud Browser'
                     src={`data:image/jpeg;base64, ${pages[currentPage].content}`}
                   />
-                </Container>
-              </React.Fragment>
+                </MockViewPort>
+              </MockBrowser>
             )
         }
-      </div>
+      </Container>
     );
   }
 }
