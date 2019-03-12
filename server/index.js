@@ -34,7 +34,7 @@ io.on('connection', async (socket) => {
 
   let pages = await getPages(browser);
 
-  let currentPage = pages[0];
+  let currentPage = 0;
 
   socket.emit('enviroment-setup', { status: 'complete' });
 
@@ -45,16 +45,16 @@ io.on('connection', async (socket) => {
       // await currentPage.emulate(iPhone)
 
       // For Desktop
-      await currentPage.setViewport({
+      await pages[currentPage].setViewport({
         width,
         height,
       });
 
-      await currentPage.goto('https://google.com', {
+      await pages[currentPage].goto('https://google.com', {
         waitUntil: "networkidle2"
       });
 
-      const pageContent = await currentPage.screenshot({
+      const pageContent = await pages[currentPage].screenshot({
         type: 'jpeg',
         quality: 50,
         fullPage: true,
@@ -67,8 +67,8 @@ io.on('connection', async (socket) => {
     socket.on('click', async (data) => {
       const {x, y} = data;
 
-      await currentPage.mouse.move(x, y);
-      await currentPage.mouse.click(x, y, {
+      await pages[currentPage].mouse.move(x, y);
+      await pages[currentPage].mouse.click(x, y, {
         delay: 200,
       });
 
@@ -77,40 +77,40 @@ io.on('connection', async (socket) => {
 
     socket.on('keypress', async (data) => {
       if (data.shiftKey) {
-        await currentPage.keyboard.down('Shift');
+        await pages[currentPage].keyboard.down('Shift');
       }
 
       switch (data.which) {
         case 8: {
-          await currentPage.keyboard.press('Backspace');
+          await pages[currentPage].keyboard.press('Backspace');
           break;
         }
 
         case 13: {
-          await currentPage.keyboard.press('Enter');
+          await pages[currentPage].keyboard.press('Enter');
         }
 
         case 32: {
-          await currentPage.keyboard.press('Space');
+          await pages[currentPage].keyboard.press('Space');
         }
 
         case 37: {
-          await currentPage.keyboard.press('ArrowLeft');
+          await pages[currentPage].keyboard.press('ArrowLeft');
           break;
         }
 
         case 38: {
-          await currentPage.keyboard.press('ArrowUp');
+          await pages[currentPage].keyboard.press('ArrowUp');
           break;
         }
 
         case 39: {
-          await currentPage.keyboard.press('ArrowRight');
+          await pages[currentPage].keyboard.press('ArrowRight');
           break;
         }
 
         case 40: {
-          await currentPage.keyboard.press('ArrowDown');
+          await pages[currentPage].keyboard.press('ArrowDown');
           break;
         }
 
@@ -123,13 +123,13 @@ io.on('connection', async (socket) => {
             character += 32;
           }
 
-          await currentPage.keyboard.sendCharacter(String.fromCharCode(character));
+          await pages[currentPage].keyboard.sendCharacter(String.fromCharCode(character));
         }
       }
     });
 
     socket.on('go-back', async () => {
-      await currentPage.goBack();
+      await pages[currentPage].goBack();
     });
 
     socket.on('navigate', async (data) => {
@@ -139,17 +139,17 @@ io.on('connection', async (socket) => {
         url = `http://${url}`;
       }
 
-      await currentPage.goto(url);
+      await pages[currentPage].goto(url);
     });
 
     socket.on('tab-switch', async (data) => {
       pages = await getPages(browser);
-      currentPage = pages[data.tabIndex];
+      currentPage = data.tabIndex;
     });
 
     const timer = setInterval(async () => {
-      if (!currentPage.isClosed()) {
-        const pageContent = await currentPage.screenshot({
+      if (!pages[currentPage].isClosed()) {
+        const pageContent = await pages[currentPage].screenshot({
           type: 'jpeg',
           quality: 30,
           fullPage: true,
@@ -159,9 +159,12 @@ io.on('connection', async (socket) => {
         const pageList = pages.map(page => { return page.url() });
 
         socket.emit('new-page-content', {
-          pageContent,
           pageList,
-          url: currentPage.url()
+          current: {
+            page: currentPage,
+            content: pageContent,
+            url: pages[currentPage].url()
+          },
         });
       } else {
         clearInterval(timer);

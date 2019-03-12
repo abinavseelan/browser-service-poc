@@ -58,17 +58,18 @@ class App extends Component {
 
       const updateObject = {
         loading: false,
+        currentPage: data.current.page,
         pages: data.pageList.map((page, index) => {
           if (index === currentPage) {
             return {
-              content: data.pageContent,
-              urlBar: urlBarFocused ? pages[currentPage].urlBar : data.url,
+              content: data.current.content,
+              urlBar: urlBarFocused ? pages[currentPage].urlBar : data.current.url,
             };
           }
 
           return {
-            content: pages[index] && pages[index.content] || null,
-            urlBar: page,
+            content: pages[index] && pages[index].content || null,
+            urlBar: pages[index] && pages[index].urlBar || '',
           };
         }),
       };
@@ -126,10 +127,6 @@ class App extends Component {
   }
 
   handleTabSwitch = (pageNumber) => () => {
-    this.setState({
-      currentPage: pageNumber,
-    });
-
     socket.emit('tab-switch', { tabIndex: pageNumber });
   }
 
